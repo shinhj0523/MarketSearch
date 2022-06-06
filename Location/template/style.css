@@ -1,0 +1,10 @@
+#category input[type=radio]{
+    display: none;
+}
+#category input[type=radio] + label {
+    color: #e0e0e0;
+
+}
+#category input[type=radio]:checked + label {
+    color: #000;
+}

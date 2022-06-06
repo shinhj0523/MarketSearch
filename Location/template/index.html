@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>상권검색</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div>
+        관심있는 이미지를 눌러보세요. 순서대로 <br>
+        관광/여가/오락, 부동산, 생활서비스, 소매, 숙박, 스포츠, 음식, 학문/교육<br><br>
+    </div>
+    <div id="category" style="width:fit-content; height:fit-content;">
+            <input type="radio" id="tour" name="category" value="관광/여가/오락">
+            <label for="tour">
+                <img src="cameraIcon.png" height="50sp" width="80px">
+                
+            </label>
+            <input type="radio" id="realty" name="category" value="부동산">
+            <label for="realty">
+                <img src="budongIcon.png" height="50sp" width="80px">
+                
+            </label>
+            <input type="radio" id="life_service" name="category" value="생활서비스">
+            <label for="life_service">
+                <img src="lifeIcon.png" height="50sp" width="80px">
+                
+            </label>
+            <input type="radio" id="retail" name="category" value="소매">
+            <label for="retail">
+                <img src="someIcon.png" height="50sp" width="80px">
+            </label>
+            <input type="radio" id="sleep" name="category" value="숙박">
+            <label for="sleep">
+                <img src="bedIcon.png" height="50sp" width="80px">
+            </label>
+            <input type="radio" id="sports" name="category" value="스포츠">
+            <label for="sports">
+                <img src="sportIcon.png" height="50sp" width="80px">
+        
+            </label>
+            <input type="radio" id="food" name="category" value="음식">
+            <label for="food">
+                <img src="food.png" height="50sp" width="80px">
+            </label>
+            <input type="radio" id="education" name="category" value="학문/교육">
+            <label for="education">
+                <img src="studyIcon.png" height="50sp" width="80px">
+            </label><br>
+            <button type="button" id="choseCategory" value="submit">submit</button>
+    </div>
+
+    <div id="map" style="width:100%; height:800px; border:2px solid black; padding: 10dp;"></div>
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=API키라 가렸습니다."></script>
+    
+        
+    
+    <script>
+        if (navigator.geolocation) {
+            // GeoLocation을 이용해서 접속 위치를 얻어옵니다
+            navigator.geolocation.getCurrentPosition(function(position) {
+                document.querySelector('#choseCategory').addEventListener('click', function() {
+                    
+                    let categoryVal = document.querySelector('input[name="category"]:checked').value;
+                    let lat = position.coords.latitude;
+                    let lon = position.coords.longitude; 
+
+                    
+                    var postdata = {
+                        lat, lon, categoryVal 
+                    }
+                    var mapContainer = document.getElementById('map'), // 지도를 표시할 div  
+                        mapOption = { 
+                            center: new kakao.maps.LatLng(lat,lon), // 지도의 중심좌표
+                            level: 3 // 지도의 확대 레벨
+                        };
+                    var map = new kakao.maps.Map(mapContainer, mapOption); // 지도를 생성합니다
+                
+
+                    fetch('http://127.0.0.1:5500/big', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(postdata),
+                    })
+                    .then((response) => response.json())
+                    .then((data) => {
+                        
+                        var positions = new Array();
+
+                        for (var i = 0; i < data.length; i ++) {
+                            var jsonObj = new Object();
+
+                            jsonObj.title = data[i].businessName
+                            jsonObj.content = `<div>${data[i].businessName}</div>`
+                            jsonObj.latlng = new kakao.maps.LatLng(data[i].latitude, data[i].longitude) 
+                            
+                            // jsonObj = JSON.stringify(jsonObj);
+                            // positions.push(JSON.parse(jsonObj));
+                            positions.push(jsonObj);
+
+
+                            var marker = new kakao.maps.Marker({
+                                map: map, // 마커를 표시할 지도
+                                title : positions[i].title, // 마커의 타이틀, 마커에 마우스를 올리면 타이틀이 표시됩니다
+                                position: positions[i].latlng, // 마커를 표시할 위치
+                            });
+
+                            // 마커에 표시할 인포윈도우를 생성합니다 
+                            var infowindow = new kakao.maps.InfoWindow({
+                                content: positions[i].content // 인포윈도우에 표시할 내용
+                            });
+
+                            // 마커에 이벤트를 등록하는 함수 만들고 즉시 호출하여 클로저를 만듭니다
+                            // 클로저를 만들어 주지 않으면 마지막 마커에만 이벤트가 등록됩니다
+                            (function(marker, infowindow) {
+                                // 마커에 mouseover 이벤트를 등록하고 마우스 오버 시 인포윈도우를 표시합니다 
+                                kakao.maps.event.addListener(marker, 'mouseover', function() {
+                                    infowindow.open(map, marker);
+                                });
+
+                                // 마커에 mouseout 이벤트를 등록하고 마우스 아웃 시 인포윈도우를 닫습니다
+                                kakao.maps.event.addListener(marker, 'mouseout', function() {
+                                    infowindow.close();
+                                });
+                            })(marker, infowindow);
+
+                             
+                        }
+
+                        marker.setDraggable(true);
+                        // console.log(positions[0])
+
+
+
+                    })
+                    .catch((error) => {
+                    console.error('실패:', error);
+                    });
+    
+                })
+            
+
+            });        
+        } else { // HTML5의 GeoLocation을 사용할 수 없을때 
+        console.log('geolocation을 사용할수 없어요..');
+        }
+
+    </script>
+
+</body>
+</html>
